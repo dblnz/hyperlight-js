@@ -1599,8 +1599,6 @@ dependencies = [
 [[package]]
 name = "hyperlight-common"
 version = "0.16.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "436dac5cc08da3db27de38b174a9b22498ab6443aaffd83b97f66a5d2f1d74cc"
 dependencies = [
  "anyhow",
  "bitflags 2.13.0",
@@ -1617,10 +1615,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "hyperlight-debug"
+version = "0.16.0"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "hyperlight-guest"
 version = "0.16.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4cb2e6548e2b837400a7b27a5ed6a6570c28801253e6ec80959700dd63925c40"
 dependencies = [
  "anyhow",
  "flatbuffers",
@@ -1633,8 +1637,6 @@ dependencies = [
 [[package]]
 name = "hyperlight-guest-bin"
 version = "0.16.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cdeccde6490e76aefe2e8ca17e1a225d2da3338f020f17533b8ee0cee7cf9a11"
 dependencies = [
  "buddy_system_allocator",
  "flatbuffers",
@@ -1652,8 +1654,6 @@ dependencies = [
 [[package]]
 name = "hyperlight-guest-macro"
 version = "0.16.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "620ed77c5c07027c63a6a741da8a9a2462a56e660691da715c3700cb281a3d23"
 dependencies = [
  "proc-macro-crate",
  "proc-macro2",
@@ -1664,8 +1664,6 @@ dependencies = [
 [[package]]
 name = "hyperlight-guest-tracing"
 version = "0.16.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d8b39160c2001db5c79916d946d04a601e4e1f2827e2c785d477b31e48f5e514"
 dependencies = [
  "hyperlight-common",
  "spin 0.12.1",
@@ -1676,8 +1674,6 @@ dependencies = [
 [[package]]
 name = "hyperlight-host"
 version = "0.16.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ef3edc7875e70a3b5cc291a17f78cfc352e24c9a665a5a1bbdbc46ada3df43b5"
 dependencies = [
  "anyhow",
  "bitflags 2.13.0",
@@ -1694,6 +1690,7 @@ dependencies = [
  "goblin",
  "hex",
  "hyperlight-common",
+ "hyperlight-debug",
  "hyperlight-guest-tracing",
  "kvm-bindings",
  "kvm-ioctls",
@@ -1790,6 +1787,7 @@ dependencies = [
  "hyperlight-guest",
  "hyperlight-guest-bin",
  "hyperlight-js-common",
+ "log",
  "rquickjs",
  "serde",
  "serde_json",
@@ -1802,8 +1800,6 @@ dependencies = [
 [[package]]
 name = "hyperlight-libc"
 version = "0.16.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3c258315b4c0ec4aae172c4ff31b34590559fb6699c144f779be2246672b3147"
 dependencies = [
  "anyhow",
  "bindgen",
@@ -3192,9 +3188,7 @@ dependencies = [
 
 [[package]]
 name = "rquickjs"
-version = "0.12.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c0688f8b0192998cca685adefdfad3483da295fa40a0ec406b4c14ecd729e858"
+version = "0.12.1"
 dependencies = [
  "rquickjs-core",
  "rquickjs-macro",
@@ -3202,9 +3196,7 @@ dependencies = [
 
 [[package]]
 name = "rquickjs-core"
-version = "0.12.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2fee8c5383f0cfda3b980a80ca4520e726e09b593c59562f579daa51b6c20411"
+version = "0.12.1"
 dependencies = [
  "async-lock",
  "hashbrown 0.17.1",
@@ -3214,9 +3206,7 @@ dependencies = [
 
 [[package]]
 name = "rquickjs-macro"
-version = "0.12.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "04e6cf4b6e695b526cb430a6f445d3ccb9908696b99f1c1f8a1480af38bed5e6"
+version = "0.12.1"
 dependencies = [
  "convert_case 0.11.0",
  "fnv",
@@ -3231,9 +3221,7 @@ dependencies = [
 
 [[package]]
 name = "rquickjs-sys"
-version = "0.12.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "698077537c286a169de8693b216672bcef148bf2e2e112ebf50758c68e9afa09"
+version = "0.12.1"
 dependencies = [
  "bindgen",
  "cc",

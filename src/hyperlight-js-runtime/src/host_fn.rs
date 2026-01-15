@@ -593,7 +593,7 @@ impl Loader for HostModuleLoader {
 }
 
 impl HostModuleLoader {
-    pub(crate) fn install(&self, ctx: &Ctx) -> anyhow::Result<()> {
+    pub(crate) fn install(&self, ctx: &Ctx, attr: Option<ImportAttributes>) -> anyhow::Result<()> {
         ensure!(
             ctx.userdata::<Self>().is_none(),
             "HostModuleLoader is already installed"

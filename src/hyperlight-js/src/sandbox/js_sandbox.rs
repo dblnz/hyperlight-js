@@ -286,6 +286,24 @@ impl JSSandbox {
         self.inner.poisoned()
     }
 
+    /// Enables the debugger for this sandbox.
+    ///
+    /// When enabled, the debugger will call the `hl_dap_debug_break` host function
+    /// when it hits a breakpoint or completes a step operation.
+    ///
+    /// # Arguments
+    ///
+    /// * `stop_on_entry` - If true, the debugger will stop at the first operation
+    ///   when a handler is called. If false, it will only stop at breakpoints.
+    ///
+    /// # Note
+    ///
+    /// This is only available when using the QuickJS runtime (`quickjs` feature).
+    #[instrument(err(Debug), skip(self), level=Level::DEBUG)]
+    pub fn enable_debugger(&mut self, stop_on_entry: bool) -> Result<()> {
+        self.inner.call::<()>("enable_debugger", (stop_on_entry,))
+    }
+
     #[cfg(test)]
     fn get_number_of_handlers(&self) -> usize {
         self.handlers.len()
@@ -331,7 +349,7 @@ impl JSSandbox {
                 .call::<()>("register_handler", (function_name, content, path))?;
         }
 
-        LoadedJSSandbox::new(self.inner, self.snapshot)
+        LoadedJSSandbox::new(self.inner, self.snapshot.clone())
     }
     /// Generate a crash dump of the current state of the VM underlying this sandbox.
     ///

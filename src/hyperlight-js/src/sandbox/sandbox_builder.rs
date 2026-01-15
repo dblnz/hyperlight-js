@@ -18,6 +18,9 @@ use std::time::Duration;
 
 use hyperlight_host::sandbox::SandboxConfiguration;
 use hyperlight_host::{is_hypervisor_present, GuestBinary, HyperlightError, Result};
+#[cfg(feature = "gdb")]
+use hyperlight_host::sandbox::config::DebugInfo;
+use hyperlight_host::sandbox::config::DapInfo;
 
 use super::proto_js_sandbox::ProtoJSSandbox;
 use crate::HostPrintFn;
@@ -67,6 +70,25 @@ impl SandboxBuilder {
     /// Set the host print function
     pub fn with_host_print_fn(mut self, host_print_fn: HostPrintFn) -> Self {
         self.host_print_fn = Some(host_print_fn);
+        self
+    }
+
+    /// Enable or disable the native debugger for the guest
+    #[cfg(feature = "gdb")]
+    pub fn with_native_debugger_enabled(mut self, _enabled: bool) -> Self {
+        let dc = DebugInfo {
+            port: 8080,
+        };
+        self.config.set_guest_debug_info(dc);
+        self
+    }
+
+    /// Enable or disable the debugger for the guest
+    pub fn with_debugger_enabled(mut self, _enabled: bool) -> Self {
+        let dc = DapInfo {
+            port: 8888,
+        };
+        self.config.set_guest_dap_info(dc);
         self
     }
 

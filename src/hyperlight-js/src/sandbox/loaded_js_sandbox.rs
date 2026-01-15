@@ -167,7 +167,7 @@ impl LoadedJSSandbox {
     /// Unloads the Handlers from the sandbox and returns a `JSSandbox` with the JavaScript runtime loaded.
     #[instrument(err(Debug), skip_all, level=Level::DEBUG)]
     pub fn unload(self) -> Result<JSSandbox> {
-        JSSandbox::from_loaded(self.inner, self.snapshot).inspect(|_| {
+        JSSandbox::from_loaded(self.inner, self.snapshot.clone()).inspect(|_| {
             metrics::counter!(METRIC_SANDBOX_UNLOADS).increment(1);
         })
     }

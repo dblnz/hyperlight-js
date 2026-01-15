@@ -1,18 +1,3 @@
-/*
-Copyright 2026  The Hyperlight Authors.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
 #![allow(clippy::disallowed_macros)]
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -39,14 +24,9 @@ fn main() -> Result<()> {
     //
     // if no argument is provided, prompt for the example to run
     //
-    // if the argument does not specify the name of a directory, the echo example is run
+    // if the argument does not specify the name of a directory, the simple example is run
 
     let mut tracy = false;
-    let mut path = "";
-    let args: Vec<String> = env::args().collect();
-    if args.len() > 1 {
-        path = &args[1];
-    }
 
     // if the environment variable ENABLE_TRACY is set, enable the Tracy layer
 
@@ -98,6 +78,9 @@ fn main() -> Result<()> {
     for entry in std::fs::read_dir(dir_path.clone())? {
         let entry = entry?;
         let dir_name = entry.file_name().into_string().unwrap();
+        if dir_name != "fibonacci" {
+            continue;
+        }
 
         //Make sure that there is an data.json and a handler.js file in the directory
         let data_path = PathBuf::from(format!("{}/{}/data.json", dir_path, dir_name));
@@ -106,13 +89,14 @@ fn main() -> Result<()> {
         // check that the files exist
         if data_path.is_file() && handler_path.is_file() {
             events.insert(
-                dir_name.clone(),
+                "handler".to_string(),
                 format!("{}/data.json", entry.path().as_os_str().to_string_lossy()),
             );
 
             let handler_path = format!("{}/handler.js", entry.path().as_os_str().to_string_lossy());
             let handler = Script::from_file(handler_path)?;
-            js_sandbox.add_handler(dir_name, handler)?;
+            js_sandbox.add_handler("handler", handler)?;
+
             num_handlers += 1;
         } else {
             println!("skipping directory: {}", dir_name);
@@ -134,38 +118,9 @@ fn main() -> Result<()> {
         "Time to get loaded sandbox with  {} handlers: {:?}",
         num_handlers, elapsed
     );
-    let mut input = String::new();
-    match path {
-        "" => {
-            // read the path of the sample to run from the stdin:
-            loop {
-                println!("Enter the name of the example to run or 'exit' to quit:");
-                input.clear();
-                std::io::stdin().read_line(&mut input)?;
-                input = input.trim().to_string();
 
-                if input == "exit" {
-                    break;
-                }
-                if !events.contains_key(input.as_str()) {
-                    println!("The example {} does not exist", input);
-                    continue;
-                };
-                let event_path = events.get(input.as_str()).unwrap().clone();
-                invoke_function(&mut loaded_sbox, input.clone(), event_path)?;
-            }
-        }
-        other => {
-            // check if the example exists
-            let function = match events.contains_key(other) {
-                true => other,
-                false => "echo",
-            };
-            println!("Running example: {}", function);
-            let event_path = events.get(function).unwrap().clone();
-            invoke_function(&mut loaded_sbox, function.to_string(), event_path)?;
-        }
-    }
+    let event_path = events.get("handler").unwrap().clone();
+    invoke_function(&mut loaded_sbox, "handler".to_string(), event_path)?;
 
     Ok(())
 }
@@ -183,7 +138,7 @@ fn invoke_function(
     event_path: String,
 ) -> Result<()> {
     let event = fs::read_to_string(event_path)?;
-    println!("handler input:");
+    println!("request before function:");
     pretty_print_json(&event)?;
     // handle request using registered handler
     let start = std::time::Instant::now();
@@ -191,7 +146,7 @@ fn invoke_function(
     match loaded_sbox.handle_event(function_name.clone(), event, None) {
         Ok(res) => {
             let elapsed = start.elapsed();
-            println!("handler output:");
+            println!("request after:");
             pretty_print_json(&res)?;
             println!("Time to execute: {:?}", elapsed);
         }

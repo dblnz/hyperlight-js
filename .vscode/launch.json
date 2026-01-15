@@ -41,5 +41,11 @@
         "gdb-remote localhost:8080"
       ]
     },
+    {
+      "name": "DAP JS Debugger attach",
+      "type": "node",
+      "request": "attach",
+      "debugServer": 8888
+    },
   ]
 }

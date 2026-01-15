@@ -69,8 +69,8 @@ uuid = "1.23.3"
 [features]
 default = ["function_call_metrics", "kvm", "mshv3"]
 crashdump = ["hyperlight-host/crashdump"]
-gdb = ["hyperlight-host/gdb"]
 function_call_metrics = []
+gdb = ["hyperlight-host/gdb"]
 kvm = ["hyperlight-host/kvm"]
 mshv3 = ["hyperlight-host/mshv3"]
 print_debug = ["hyperlight-host/print_debug"]
@@ -81,6 +81,11 @@ monitor-cpu-time = ["dep:libc", "dep:windows-sys"]
 
 [package.metadata.cargo-machete]
 ignored = ["hyperlight-js-runtime"]
+
+[[example]]
+name = "hello-world"
+path = "examples/hello-world/main.rs"
+test = false
 
 [[example]]
 name = "run_handler"

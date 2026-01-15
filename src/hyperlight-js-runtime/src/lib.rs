@@ -22,6 +22,8 @@ mod globals;
 /// Only compiled when building for the Hyperlight VM target.
 #[cfg(hyperlight)]
 mod guest;
+#[cfg(hyperlight)]
+use guest::debugger;
 pub mod host;
 mod host_fn;
 /// Native module infrastructure for the JS runtime.
@@ -183,7 +185,7 @@ impl JsRuntime {
         context.with(|ctx| -> anyhow::Result<()> {
             // we need to install the host loader in the context as the loader uses the context to
             // store some global state needed for module instantiation.
-            host_loader.install(&ctx)?;
+            host_loader.install(&ctx, None)?;
 
             // Step 1: Setup the global objects in the context, so they are available to the handler scripts.
             globals::setup(&ctx).catch(&ctx)?;
@@ -202,6 +204,13 @@ impl JsRuntime {
             handlers: HashMap::new(),
             user_modules,
         })
+    }
+
+    /// Enable debugging for this runtime, which will call the provided callback on every operation
+    /// change.
+    #[cfg(hyperlight)]
+    pub fn enable_debugging<D: debugger::Debugger>(&self, debugger: D) -> anyhow::Result<()> {
+        debugger.enable_debugging(&self.context)
     }
 
     /// Register a host function in the specified module.

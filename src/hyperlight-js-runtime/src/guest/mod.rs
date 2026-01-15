@@ -25,6 +25,8 @@ limitations under the License.
 //! - Libc stub implementations required by QuickJS
 //!
 //! This is all `cfg(hyperlight)` — compiled out entirely for native builds.
+extern crate alloc;
+pub mod debugger;
 
 use alloc::format;
 use alloc::string::String;
@@ -76,9 +78,17 @@ impl crate::host::Host for Host {
 }
 
 static RUNTIME: spin::LazyLock<Mutex<JsRuntime>> = spin::LazyLock::new(|| {
-    Mutex::new(JsRuntime::new(Host).unwrap_or_else(|e| {
-        panic!("Failed to initialize JS runtime: {e:#?}");
-    }))
+    Mutex::new({
+        let ctx = JsRuntime::new(Host).unwrap_or_else(|e| {
+            panic!("Failed to initialize JS runtime: {e:#?}");
+        });
+        ctx.enable_debugging(debugger::Debugger)
+            .unwrap_or_else(|e| {
+                panic!("Failed to enable debugging: {e:#?}");
+            });
+
+        ctx
+    })
 });
 
 #[main]
@@ -88,6 +98,14 @@ pub extern "C" fn hyperlight_main() {
     let _ = &*RUNTIME;
 }
 
+/// Guest function to enable the debugger
+#[guest_function("enable_debugger")]
+#[instrument(skip_all, level = "info")]
+fn enable_debugger_guest(stop_on_entry: bool) -> Result<()> {
+    debugger::enable_debugger(stop_on_entry);
+    Ok(())
+}
+
 #[guest_function("register_handler")]
 #[instrument(skip_all, level = "info")]
 fn register_handler(
@@ -95,6 +113,7 @@ fn register_handler(
     handler_script: String,
     handler_pwd: String,
 ) -> Result<()> {
+    debugger::reset_debugger_state();
     RUNTIME
         .lock()
         .register_handler(function_name, handler_script, handler_pwd)?;
@@ -164,5 +183,6 @@ fn register_host_modules(host_modules_json: String) -> Result<()> {
 
 #[guest_function("RunHandler")]
 fn run_handler(function_name: String, event: String, run_gc: bool) -> Result<String> {
+    debugger::reset_debugger_state();
     Ok(RUNTIME.lock().run_handler(function_name, event, run_gc)?)
 }

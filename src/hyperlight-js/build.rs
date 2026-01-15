@@ -197,6 +197,9 @@ fn build_js_runtime() -> PathBuf {
         .join("hyperlight-js-runtime");
 
     if let Ok(path) = resource.canonicalize() {
+        if std::env::var("CARGO_FEATURE_GDB").is_ok() {
+            println!("cargo:warning=bundled QuickJS runtime from {}", path.display());
+        }
         path
     } else {
         panic!(
