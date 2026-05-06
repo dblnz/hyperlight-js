@@ -105,3 +105,7 @@ The tracing example demonstrates how to use to configure tracing subscribers
 
 Hyperlight-js supports debugging the guest runtime using GDB or LLDB through the `gdb` feature.
 For instructions on how to set up debugging, see the [Debugging the guest runtime](docs/guest-runtime-debugging.md) guide.
+
+### Or you can use a codespace
+
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://github.com/codespaces/new/dblnz/hyperlight-js/tree/experimental-debugger-support)

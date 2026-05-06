@@ -16,14 +16,15 @@ limitations under the License.
 #![no_std]
 extern crate alloc;
 
+#[cfg(hyperlight)]
+pub mod debugger;
+
 mod globals;
 /// Hyperlight guest entry point — provides `hyperlight_main`,
 /// `guest_dispatch_function`, and all guest plumbing.
 /// Only compiled when building for the Hyperlight VM target.
 #[cfg(hyperlight)]
 mod guest;
-#[cfg(hyperlight)]
-use guest::debugger;
 pub mod host;
 mod host_fn;
 /// Native module infrastructure for the JS runtime.

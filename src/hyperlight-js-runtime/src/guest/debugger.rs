@@ -1,10 +1,54 @@
+//! Thin QuickJS adapter over the generic debugger in `hyperlight_guest_bin::dap`.
+//!
+//! This module wires the QuickJS trace hook into the shared debugger state machine
+//! and re-exports the public API that `hyperlight.rs` depends on.
+
+use alloc::format;
+use alloc::string::ToString;
 use anyhow::Result;
+use hyperlight_guest_bin::dap;
 use rquickjs::Context;
 
-/// A trait representing the debugger for the JS runtime. This allows the host to enable
-/// debugging for the JS runtime, which allows the runtime to report debugging information
-pub trait Debugger {
-    /// Enable debugging for the JS runtime. This will allow the runtime to report
-    /// debugging information to the host, such as the current call stack and variable values.
-    fn enable_debugging(&self, ctx: &Context) -> Result<()>;
+pub struct Debugger;
+
+impl crate::debugger::Debugger for Debugger {
+    fn enable_debugging(&self, ctx: &Context) -> Result<()> {
+        ctx.runtime().set_debug_trace_handler(
+            ctx,
+            Some(alloc::boxed::Box::new(
+                |context, filename, funcname, line, col| {
+                    dap::on_trace_event_with(filename, funcname, line, col, &|level| {
+                        context
+                            .local_variables_at_level(level as i32)
+                            .unwrap_or_default()
+                            .into_iter()
+                            .map(|v| dap::Variable {
+                                name: v.name,
+                                value: format!("{:?}", v.value),
+                                type_name: Some(
+                                    if v.is_arg {
+                                        "argument"
+                                    } else {
+                                        "local"
+                                    }
+                                    .to_string(),
+                                ),
+                            })
+                            .collect()
+                    })
+                },
+            )),
+        );
+        Ok(())
+    }
+}
+
+/// Enable the debugger with optional stop-on-entry.
+pub fn enable_debugger(stop_on_entry: bool) {
+    dap::enable(stop_on_entry);
+}
+
+/// Reset per-invocation debugger state (call at handler registration / dispatch).
+pub fn reset_debugger_state() {
+    dap::reset();
 }
