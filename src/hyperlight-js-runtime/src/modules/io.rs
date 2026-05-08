@@ -15,7 +15,10 @@ limitations under the License.
 */
 use alloc::string::String;
 
-use crate::libc;
+unsafe extern "C" {
+    fn fflush(stream: *mut core::ffi::c_void) -> core::ffi::c_int;
+    fn putchar(c: core::ffi::c_int) -> core::ffi::c_int;
+}
 
 #[rquickjs::module(rename_vars = "camelCase", rename_types = "camelCase")]
 #[allow(clippy::module_inception)]
@@ -24,8 +27,8 @@ pub mod io {
 
     #[rquickjs::function]
     pub fn print(txt: String) {
-        for byte in txt.bytes() {
-            let _ = unsafe { libc::putchar(byte as libc::c_int) };
+        for c in txt.bytes() {
+            let _ = unsafe { putchar(c as core::ffi::c_int) };
         }
         flush()
     }
@@ -33,6 +36,23 @@ pub mod io {
     #[rquickjs::function]
     pub fn flush() {
         // Flush the output buffer of libc to make sure all output is printed out.
-        let _ = unsafe { libc::fflush(core::ptr::null_mut()) };
+
+        #[cfg(hyperlight)]
+        {
+            unsafe extern "C" {
+                static stdout: *mut core::ffi::c_void;
+                static stderr: *mut core::ffi::c_void;
+            }
+
+            // In Hyperlight, fflush(NULL) is not supported, so we need to flush both stdout and stderr separately.
+            let _ = unsafe { fflush(stdout) };
+            let _ = unsafe { fflush(stderr) };
+        }
+
+        #[cfg(not(hyperlight))]
+        {
+            // In the native runtime, we can just fflush(NULL) to flush all output streams.
+            let _ = unsafe { fflush(core::ptr::null_mut()) };
+        }
     }
 }
