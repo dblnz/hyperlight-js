@@ -14,13 +14,22 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #![no_std]
-#![no_main]
 extern crate alloc;
 
 mod globals;
+/// Hyperlight guest entry point — provides `hyperlight_main`,
+/// `guest_dispatch_function`, and all guest plumbing.
+/// Only compiled when building for the Hyperlight VM target.
+#[cfg(hyperlight)]
+mod guest;
 pub mod host;
 mod host_fn;
-mod modules;
+/// Native module infrastructure for the JS runtime.
+///
+/// Contains the built-in native modules (io, crypto, console, require)
+/// and the [`native_modules!`] macro for extending the runtime with
+/// custom native modules in downstream crates.
+pub mod modules;
 pub(crate) mod utils;
 
 use alloc::format;
@@ -31,6 +40,17 @@ use core::cell::RefCell;
 
 use anyhow::{anyhow, Context as _};
 use hashbrown::HashMap;
+use modules::NativeModuleLoader;
+/// Re-export of the [`rquickjs`] crate that this runtime is built against.
+///
+/// The [`custom_globals!`] and [`native_modules!`] macros expand to code in
+/// downstream extender crates that references rquickjs types through this
+/// re-export (`$crate::rquickjs::...`). Extender crates should use these
+/// re-exported types in their setup-function signatures so the generated glue
+/// is bound to the *same* rquickjs version the runtime was compiled against —
+/// turning what would otherwise be a silent ABI mismatch into a compile-time
+/// error.
+pub use rquickjs;
 use rquickjs::loader::{ImportAttributes, Loader, Resolver};
 use rquickjs::promise::MaybePromise;
 use rquickjs::{Context, Ctx, Function, Module, Persistent, Result, Runtime, Value};
@@ -40,7 +60,6 @@ use tracing::instrument;
 
 use crate::host::Host;
 use crate::host_fn::{HostFunction, HostModuleLoader};
-use crate::modules::NativeModuleLoader;
 
 /// A handler is a javascript function that takes a single `event` object parameter,
 /// and is registered to the static `Context` instance
@@ -126,7 +145,11 @@ unsafe impl Send for JsRuntime {}
 
 impl JsRuntime {
     /// Create a new `JsRuntime` with the given host.
-    /// The resulting runtime will have global objects registered.
+    ///
+    /// The runtime includes all built-in native modules (io, crypto, console,
+    /// require) plus any custom modules registered via
+    /// [`register_native_module`](modules::register_native_module) or the
+    /// [`native_modules!`] macro.
     #[instrument(skip_all, level = "info")]
     pub fn new<H: Host + 'static>(host: H) -> anyhow::Result<Self> {
         let runtime = Runtime::new().context("Unable to initialize JS_RUNTIME")?;
@@ -162,8 +185,16 @@ impl JsRuntime {
             // store some global state needed for module instantiation.
             host_loader.install(&ctx)?;
 
-            // Setup the global objects in the context, so they are available to the handler scripts.
-            globals::setup(&ctx).catch(&ctx)
+            // Step 1: Setup the global objects in the context, so they are available to the handler scripts.
+            globals::setup(&ctx).catch(&ctx)?;
+
+            // Step 2: Setup custom globals registered by extender crates via custom_globals! macro.
+            // Runs after built-in globals so custom setup can reference console, require, etc.
+            // also allows custom_globals! to override some (io,console) built-in globals if needed (e.g. for testing).
+            modules::setup_custom_globals(&ctx).catch(&ctx)?;
+
+            // Step 3: Freeze built-in globals (handler code can't tamper)
+            globals::freeze(&ctx).catch(&ctx)
         })?;
 
         Ok(Self {

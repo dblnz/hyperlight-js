@@ -13,16 +13,22 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-use rquickjs::{Ctx, Function, Module, Object};
+#![cfg_attr(hyperlight, no_std)]
 
-pub fn setup(ctx: &Ctx<'_>) -> rquickjs::Result<()> {
-    let globals = ctx.globals();
+//! A custom native module providing basic math operations.
+//! Used as a test fixture for the native module extension system.
 
-    // Setup `print` as a writable global.
-    // Allows custom_globals! to override (e.g. for output capture).
-    // Frozen by globals::freeze() after custom_globals! runs.
-    let io: Object = Module::import(ctx, "io")?.finish()?;
-    globals.set("print", io.get::<_, Function>("print")?)?;
+#[rquickjs::module(rename_vars = "camelCase")]
+pub mod math {
+    /// Add two numbers.
+    #[rquickjs::function]
+    pub fn add(a: f64, b: f64) -> f64 {
+        a + b
+    }
 
-    Ok(())
+    /// Multiply two numbers.
+    #[rquickjs::function]
+    pub fn multiply(a: f64, b: f64) -> f64 {
+        a * b
+    }
 }

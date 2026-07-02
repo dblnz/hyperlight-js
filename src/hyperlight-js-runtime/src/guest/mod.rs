@@ -13,24 +13,37 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-extern crate alloc;
+
+//! Hyperlight guest entry point and infrastructure.
+//!
+//! This module provides the guest-side plumbing needed to run the JS runtime
+//! inside a Hyperlight VM. It includes:
+//! - The `Host` implementation that calls out to hyperlight host functions
+//! - The `hyperlight_main` entry point
+//! - Guest function registrations (register_handler, RegisterHostModules)
+//! - The `guest_dispatch_function` fallback for handler calls
+//! - Libc stub implementations required by QuickJS
+//!
+//! This is all `cfg(hyperlight)` — compiled out entirely for native builds.
 
 use alloc::format;
 use alloc::string::String;
 use alloc::vec::Vec;
+
 use anyhow::{anyhow, Context as _};
 use hashbrown::HashMap;
 use hyperlight_guest_bin::error::{ErrorCode, HyperlightGuestError, Result};
 use hyperlight_guest_bin::{guest_function, host_function, main};
-use hyperlight_js_runtime::JsRuntime;
 use spin::Mutex;
 use tracing::instrument;
+
+use crate::JsRuntime;
 
 mod stubs;
 
 struct Host;
 
-pub trait CatchGuestErrorExt {
+trait CatchGuestErrorExt {
     type Ok;
     fn catch(self) -> anyhow::Result<Self::Ok>;
 }
@@ -42,7 +55,7 @@ impl<T> CatchGuestErrorExt for Result<T> {
     }
 }
 
-impl hyperlight_js_runtime::host::Host for Host {
+impl crate::host::Host for Host {
     fn resolve_module(&self, base: String, name: String) -> anyhow::Result<String> {
         #[host_function("ResolveModule")]
         fn resolve_module(base: String, name: String) -> Result<String>;
@@ -70,9 +83,8 @@ static RUNTIME: spin::LazyLock<Mutex<JsRuntime>> = spin::LazyLock::new(|| {
 
 #[main]
 #[instrument(skip_all, level = "info")]
-fn main() {
-    // dereference RUNTIME to force its initialization
-    // of the LazyLock static
+pub extern "C" fn hyperlight_main() {
+    // Initialise the runtime (custom modules are registered lazily on first use)
     let _ = &*RUNTIME;
 }
 
@@ -92,9 +104,7 @@ fn register_handler(
 #[guest_function("register_module")]
 #[instrument(skip_all, level = "info")]
 fn register_module(module_name: String, module_source: String) -> Result<()> {
-    RUNTIME
-        .lock()
-        .register_module(module_name, module_source)?;
+    RUNTIME.lock().register_module(module_name, module_source)?;
     Ok(())
 }
 
