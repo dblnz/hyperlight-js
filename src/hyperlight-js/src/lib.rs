@@ -27,6 +27,9 @@ mod script;
 pub mod sandbox;
 
 use hyperlight_host::func::HostFunction;
+// Re-export FnReturn for the NAPI bridge (used in register_js signature).
+#[doc(hidden)]
+pub use sandbox::host_fn::FnReturn;
 /// Validate a module identifier (name or namespace).
 pub use sandbox::js_sandbox::validate_module_identifier;
 /// Validate that a namespace is not reserved.
