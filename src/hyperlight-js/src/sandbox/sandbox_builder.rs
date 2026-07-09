@@ -20,7 +20,6 @@ use hyperlight_host::sandbox::SandboxConfiguration;
 use hyperlight_host::{is_hypervisor_present, GuestBinary, HyperlightError, Result};
 #[cfg(feature = "gdb")]
 use hyperlight_host::sandbox::config::DebugInfo;
-use hyperlight_host::sandbox::config::DapInfo;
 
 use super::proto_js_sandbox::ProtoJSSandbox;
 use crate::HostPrintFn;
@@ -29,6 +28,9 @@ use crate::HostPrintFn;
 pub struct SandboxBuilder {
     config: SandboxConfiguration,
     host_print_fn: Option<HostPrintFn>,
+    /// TCP port for the DAP debug server, when debugging is enabled.
+    #[cfg(feature = "debugger")]
+    dap_port: Option<u16>,
 }
 
 /// The minimum scratch size for the JS runtime sandbox.
@@ -64,6 +66,8 @@ impl SandboxBuilder {
         Self {
             config,
             host_print_fn: None,
+            #[cfg(feature = "debugger")]
+            dap_port: None,
         }
     }
 
@@ -83,12 +87,14 @@ impl SandboxBuilder {
         self
     }
 
-    /// Enable or disable the debugger for the guest
-    pub fn with_debugger_enabled(mut self, _enabled: bool) -> Self {
-        let dc = DapInfo {
-            port: 8888,
-        };
-        self.config.set_guest_dap_info(dc);
+    /// Enable or disable the DAP debugger for the guest.
+    ///
+    /// When enabled, a DAP server is started on port 8888 and the
+    /// `hl_dap_debug_break` host function is registered so the guest can
+    /// report breakpoint/step events to a connected debugger (e.g. VS Code).
+    #[cfg(feature = "debugger")]
+    pub fn with_debugger_enabled(mut self, enabled: bool) -> Self {
+        self.dap_port = enabled.then_some(8888);
         self
     }
 
@@ -194,8 +200,13 @@ impl SandboxBuilder {
             return Err(HyperlightError::NoHypervisorFound());
         }
         let guest_binary = GuestBinary::Buffer(super::JSRUNTIME);
-        let proto_js_sandbox =
+        #[cfg_attr(not(feature = "debugger"), allow(unused_mut))]
+        let mut proto_js_sandbox =
             ProtoJSSandbox::new(guest_binary, Some(self.config), self.host_print_fn)?;
+        #[cfg(feature = "debugger")]
+        if let Some(port) = self.dap_port {
+            proto_js_sandbox.enable_dap(port)?;
+        }
         Ok(proto_js_sandbox)
     }
 }

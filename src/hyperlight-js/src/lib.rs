@@ -23,6 +23,11 @@ limitations under the License.
 mod resolver;
 mod script;
 
+/// Debug Adapter Protocol (DAP) server for debugging guest JavaScript.
+#[cfg(feature = "debugger")]
+#[allow(missing_docs, dead_code, unused_imports)]
+mod debug;
+
 /// Sandbox module containing all sandbox-related types
 pub mod sandbox;
 

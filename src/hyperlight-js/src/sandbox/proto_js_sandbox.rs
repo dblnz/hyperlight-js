@@ -70,6 +70,55 @@ impl ProtoJSSandbox {
         })
     }
 
+    /// Enables the DAP debugger: registers the `hl_dap_debug_break` host
+    /// function and starts the DAP server thread on the given port.
+    ///
+    /// The host function closes over a shared [`crate::debug::DapContext`]. The
+    /// DAP server thread's channel is injected into that context once the
+    /// thread has bound its socket; until then (or if binding fails) the guest
+    /// simply continues execution.
+    #[cfg(feature = "debugger")]
+    pub(super) fn enable_dap(&mut self, port: u16) -> Result<()> {
+        use crate::debug::{
+            create_dap_thread, create_shared_dap_context, DebugAction, DebugActionType,
+            DebugBreakEvent, DEBUG_BREAK_FUNC_NAME,
+        };
+
+        let dap_context = create_shared_dap_context();
+        let ctx = dap_context.clone();
+
+        self.inner.register(
+            DEBUG_BREAK_FUNC_NAME,
+            move |event_json: String| -> hyperlight_host::Result<String> {
+                let event: DebugBreakEvent = match serde_json::from_str(&event_json) {
+                    Ok(e) => e,
+                    Err(err) => {
+                        tracing::error!("Failed to parse debug break event: {}", err);
+                        let action = DebugAction {
+                            action: DebugActionType::Continue,
+                            breakpoints: Vec::new(),
+                        };
+                        return Ok(serde_json::to_string(&action).unwrap_or_default());
+                    }
+                };
+
+                let action = ctx.handle_break(event);
+
+                Ok(serde_json::to_string(&action).unwrap_or_else(|e| {
+                    tracing::error!("Failed to serialize debug action: {}", e);
+                    String::from(r#"{"action":"continue","breakpoints":[]}"#)
+                }))
+            },
+        )?;
+
+        match create_dap_thread(port) {
+            Ok(channel) => dap_context.set_channel(channel),
+            Err(e) => tracing::error!("Could not create DAP connection: {:#}", e),
+        }
+
+        Ok(())
+    }
+
     /// Install a custom file system for module resolution and loading.
     ///
     /// Enables JavaScript module imports using the provided ~FileSystem~ implementation.

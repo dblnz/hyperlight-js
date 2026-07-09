@@ -14,7 +14,7 @@ It is built on top of Hyperlight.
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-hyperlight-js-common = { workspace = true }
+hyperlight-js-common = { workspace = true, features = ["serde"] }
 anyhow = "1.0.102"
 fn-traits = "0.2.0"
 hyperlight-host = { workspace = true }
@@ -25,6 +25,10 @@ phf = { version = "0.14", features = ["macros"] }
 serde = { version = "1.0" }
 serde_json = { version = "1.0" }
 tracing = "0.1.44"
+# Optional dependencies for the DAP debugger (enabled via the `debugger` feature)
+crossbeam-channel = { version = "0.5", optional = true }
+log = { version = "0.4", optional = true }
+thiserror = { version = "2.0", optional = true }
 
 # Optional dependencies for execution monitors
 tokio = { version = "1.52", features = ["rt-multi-thread", "time", "sync", "macros"] }
@@ -67,8 +71,10 @@ tracing-tracy = { version = "0.11", features = ["timer-fallback", "ondemand"] }
 uuid = "1.23.3"
 
 [features]
-default = ["function_call_metrics", "kvm", "mshv3"]
+default = ["function_call_metrics", "kvm", "mshv3", "debugger"]
 crashdump = ["hyperlight-host/crashdump"]
+# Enables the Debug Adapter Protocol (DAP) server for debugging guest JavaScript.
+debugger = ["dep:crossbeam-channel", "dep:log", "dep:thiserror", "hyperlight-js-common/serde"]
 function_call_metrics = []
 gdb = ["hyperlight-host/gdb"]
 kvm = ["hyperlight-host/kvm"]

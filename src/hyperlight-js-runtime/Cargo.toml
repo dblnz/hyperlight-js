@@ -21,7 +21,7 @@ harness = false
 test = false
 
 [dependencies]
-hyperlight-js-common = { workspace = true }
+hyperlight-js-common = { workspace = true, features = ["serde"] }
 anyhow = { version = "1.0", default-features = false }
 base64 = {version = "0.22", default-features = false, features = ["alloc"] }
 fn-traits = "0.2.0"
@@ -30,7 +30,7 @@ hex = { version = "0.4.3", default-features = false, features = ["alloc"] }
 hmac =  { version = "0.12" , default-features = false, features = ["reset"]}
 log =  { version ="0.4", features = ["max_level_trace", "release_max_level_warn"] }
 # rquickjs = { version = "0.12", default-features = false, features = ["bindgen", "futures", "macro", "loader"] }
-rquickjs = { path = "../../../../../js/rquickjs/", version = "0.12", default-features = false, features = ["bindgen", "futures", "macro", "loader"] }
+rquickjs = { git = "https://github.com/dblnz/rquickjs", rev = "9a99d5885ae8eaf4fff847893529d993b29514c7", default-features = false, features = ["bindgen", "futures", "macro", "loader"] }
 serde = { version = "1.0.228", default-features = false, features = ["derive", "alloc"] }
 serde_json = { version = "1.0.150", default-features = false, features = ["alloc"] }
 sha2 =  { version = "0.10" , default-features = false, features = ["force-soft"]}
@@ -40,7 +40,7 @@ tracing = { version = "0.1.44", default-features = false, features = ["log","att
 [target.'cfg(hyperlight)'.dependencies]
 hyperlight-common = { workspace = true, default-features = false }
 hyperlight-guest = { workspace = true }
-hyperlight-guest-bin = { workspace = true, features = ["dap"] }
+hyperlight-guest-bin = { workspace = true }
 
 [target.'cfg(not(hyperlight))'.dependencies]
 clap = { version = "4.6", features = ["derive"] }

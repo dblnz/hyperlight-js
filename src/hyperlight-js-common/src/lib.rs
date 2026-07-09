@@ -42,6 +42,10 @@ limitations under the License.
 #![no_std]
 extern crate alloc;
 
+/// Shared Debug Adapter Protocol (DAP) wire types used by both the host
+/// (`hyperlight-js`) and the guest (`hyperlight-js-runtime`).
+pub mod dap;
+
 use alloc::fmt;
 use alloc::string::String;
 use alloc::vec::Vec;

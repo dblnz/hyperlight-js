@@ -26,6 +26,7 @@ limitations under the License.
 //!
 //! This is all `cfg(hyperlight)` — compiled out entirely for native builds.
 extern crate alloc;
+pub mod dap;
 pub mod debugger;
 
 use alloc::format;

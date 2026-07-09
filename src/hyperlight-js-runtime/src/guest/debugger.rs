@@ -1,4 +1,4 @@
-//! Thin QuickJS adapter over the generic debugger in `hyperlight_guest_bin::dap`.
+//! Thin QuickJS adapter over the debugger state machine in [`crate::guest::dap`].
 //!
 //! This module wires the QuickJS trace hook into the shared debugger state machine
 //! and re-exports the public API that `hyperlight.rs` depends on.
@@ -6,8 +6,9 @@
 use alloc::format;
 use alloc::string::ToString;
 use anyhow::Result;
-use hyperlight_guest_bin::dap;
 use rquickjs::Context;
+
+use crate::guest::dap;
 
 pub struct Debugger;
 

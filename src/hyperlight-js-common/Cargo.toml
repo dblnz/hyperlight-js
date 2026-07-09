@@ -14,5 +14,10 @@ the host-side `hyperlight-js` crate and the guest-side `hyperlight-js-runtime`
 crate (which compiles for `x86_64-hyperlight-none`).
 """
 
+[features]
+# Enables `serde` derives on the shared DAP types.
+serde = ["dep:serde"]
+
 [dependencies]
-# no_std + alloc only — no std, no serde, no anyhow
+# no_std + alloc only — no std, no anyhow
+serde = { version = "1.0.228", default-features = false, optional = true, features = ["derive", "alloc"] }
