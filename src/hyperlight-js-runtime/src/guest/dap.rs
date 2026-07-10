@@ -428,10 +428,11 @@ impl DebuggerState {
 
     /// Apply a [`DebugAction`] received from the host.
     fn handle_action(&mut self, action: DebugAction) {
-        // Replace breakpoints if the host sent any.
-        if !action.breakpoints.is_empty() {
-            self.breakpoints = action.breakpoints;
-        }
+        // The host always sends the full breakpoint set with every action, so
+        // replace unconditionally. Guarding on `!is_empty()` would make it
+        // impossible to remove the last breakpoint (an empty list would be
+        // silently ignored).
+        self.breakpoints = action.breakpoints;
 
         match action.action {
             DebugActionType::Continue => {

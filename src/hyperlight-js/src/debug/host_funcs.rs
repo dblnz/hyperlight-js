@@ -169,20 +169,12 @@ pub fn handle_debug_break(
                             }
                         })
                         .collect();
-                    // Acknowledge to DAP server
-                    let bp_response: Vec<_> = file_bps
-                        .iter()
-                        .map(|bp| super::messages::Breakpoint {
-                            id: bp.id,
-                            verified: true,
-                            line: bp.line,
-                            message: None,
-                        })
-                        .collect();
                     breakpoints_by_file.insert(source_path, file_bps);
-                    let _ = channel.send(DapResponse::BreakpointsSet {
-                        breakpoints: bp_response,
-                    });
+                    // NOTE: The DAP server synthesizes the `setBreakpoints`
+                    // response to the client itself and does not read a reply
+                    // here. Sending one would leave an unconsumed message in
+                    // the channel that desyncs subsequent request/response
+                    // exchanges (e.g. stackTrace would receive it by mistake).
                 }
                 DapRequest::StackTrace { .. } => {
                     // Send stack trace from the event

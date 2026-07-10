@@ -163,26 +163,73 @@ impl DapServer {
         // Content-Length: <length>\r\n
         // \r\n
         // <JSON payload>
+        //
+        // The socket has a short read timeout so the main loop can poll for VM
+        // events. That means any individual read may time out part-way through
+        // a message. We only treat a timeout as "nothing pending" when it
+        // happens before any bytes of the header have arrived; once a message
+        // has started we keep reading until it is fully consumed, otherwise a
+        // message split across the timeout boundary would be corrupted or drop
+        // the connection.
 
         let mut header_line = String::new();
-        match self.reader.read_line(&mut header_line) {
-            Ok(0) => return Err(DapError::ConnectionClosed),
-            Ok(_) => {}
-            Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => return Ok(None),
-            Err(ref e) if e.kind() == std::io::ErrorKind::TimedOut => return Ok(None),
-            Err(e) => return Err(DapError::AcceptError(e)),
+        loop {
+            match self.reader.read_line(&mut header_line) {
+                Ok(0) => return Err(DapError::ConnectionClosed),
+                Ok(_) => {
+                    if header_line.ends_with('\n') {
+                        break;
+                    }
+                    // Partial header line; keep reading until newline.
+                }
+                Err(ref e)
+                    if e.kind() == std::io::ErrorKind::WouldBlock
+                        || e.kind() == std::io::ErrorKind::TimedOut =>
+                {
+                    if header_line.is_empty() {
+                        // Nothing pending yet — let the caller poll VM events.
+                        return Ok(None);
+                    }
+                    // Mid-header: wait for the rest of the line.
+                }
+                Err(e) => return Err(DapError::AcceptError(e)),
+            }
         }
 
         // Parse Content-Length header
         let content_length = Self::parse_content_length(&header_line)?;
 
-        // Read the blank line separator
+        // Read the blank line separator (retry on timeout until complete).
         let mut blank = String::new();
-        self.reader.read_line(&mut blank)?;
+        loop {
+            match self.reader.read_line(&mut blank) {
+                Ok(0) => return Err(DapError::ConnectionClosed),
+                Ok(_) => {
+                    if blank.ends_with('\n') {
+                        break;
+                    }
+                }
+                Err(ref e)
+                    if e.kind() == std::io::ErrorKind::WouldBlock
+                        || e.kind() == std::io::ErrorKind::TimedOut => {}
+                Err(e) => return Err(DapError::AcceptError(e)),
+            }
+        }
 
-        // Read the JSON payload
+        // Read the JSON payload, tracking progress so a timeout mid-payload
+        // resumes instead of losing bytes (`read_exact` discards on error).
         let mut payload = vec![0u8; content_length];
-        self.reader.read_exact(&mut payload)?;
+        let mut filled = 0;
+        while filled < content_length {
+            match self.reader.read(&mut payload[filled..]) {
+                Ok(0) => return Err(DapError::ConnectionClosed),
+                Ok(n) => filled += n,
+                Err(ref e)
+                    if e.kind() == std::io::ErrorKind::WouldBlock
+                        || e.kind() == std::io::ErrorKind::TimedOut => {}
+                Err(e) => return Err(DapError::AcceptError(e)),
+            }
+        }
 
         let payload_str = String::from_utf8_lossy(&payload);
         log::debug!("DAP server: received: {}", payload_str);
